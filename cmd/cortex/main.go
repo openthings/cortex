@@ -16,6 +16,7 @@ import (
 	"github.com/mwitkow/go-grpc-middleware"
 	"github.com/opentracing-contrib/go-stdlib/nethttp"
 	"github.com/opentracing/opentracing-go"
+	"github.com/tomwilkie/loki/pkg/client"
 	"github.com/weaveworks/scope/common/middleware"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -146,7 +147,11 @@ func main() {
 	r := ring.New(consul, cfg.distributorConfig.HeartbeatTimeout)
 	defer r.Stop()
 
+	tracer, _ := loki.NewTracer()
+	opentracing.InitGlobalTracer(tracer)
+
 	router := mux.NewRouter()
+	router.Handle("/traces", loki.Handler())
 	switch cfg.mode {
 	case modeDistributor:
 		cfg.distributorConfig.Ring = r
