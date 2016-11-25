@@ -1,12 +1,13 @@
 package ring
 
 import (
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"math"
 	"net/http"
 	"time"
+
+	"github.com/golang/protobuf/proto"
 )
 
 const tpl = `
@@ -72,7 +73,7 @@ func (r *Ring) forget(id string) error {
 		ringDesc.removeIngester(id)
 		return ringDesc, true, nil
 	}
-	return r.consul.CAS(consulKey, descFactory, unregister)
+	return r.consul.CAS(consulKey, unregister)
 }
 
 func (r *Ring) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -93,8 +94,9 @@ func (r *Ring) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	ingesters := []interface{}{}
 	tokens, owned := countTokens(r.ringDesc.Tokens)
 	for id, ing := range r.ringDesc.Ingesters {
+		timestamp := time.Unix(ing.Timestamp, 0)
 		state := ing.State.String()
-		if now.Sub(ing.Timestamp) > r.heartbeatTimeout {
+		if now.Sub(timestamp) > r.heartbeatTimeout {
 			state = unhealthy
 		}
 
@@ -106,16 +108,10 @@ func (r *Ring) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			ID:        id,
 			State:     state,
 			Hostname:  ing.Hostname,
-			Timestamp: ing.Timestamp.String(),
+			Timestamp: timestamp.String(),
 			Tokens:    tokens[id],
 			Ownership: (float64(owned[id]) / float64(math.MaxUint32)) * 100,
 		})
-	}
-
-	buf, err := json.Marshal(r.ringDesc)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
 	}
 
 	if err := tmpl.Execute(w, struct {
@@ -127,7 +123,7 @@ func (r *Ring) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		Ingesters: ingesters,
 		Message:   message,
 		Now:       time.Now(),
-		Ring:      string(buf),
+		Ring:      proto.MarshalTextString(r.ringDesc),
 	}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
