@@ -73,6 +73,7 @@ func (d *IngesterDesc) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// UnmarshalJSON allows the new proto TokenDescs to read the old JSON format.
 func (d *TokenDesc) UnmarshalJSON(in []byte) error {
 	var tmp oldTokenDesc
 	if err := json.Unmarshal(in, &tmp); err != nil {
@@ -84,6 +85,7 @@ func (d *TokenDesc) UnmarshalJSON(in []byte) error {
 	return nil
 }
 
+// MarshalJSON allows the new proto TokenDescs to write the old JSON format.
 func (d *TokenDesc) MarshalJSON() ([]byte, error) {
 	return json.Marshal(oldTokenDesc{
 		Token:    d.Token,
