@@ -39,6 +39,11 @@ type oldIngesterDesc struct {
 	ProtoRing    bool          `json:"proto_ring"`
 }
 
+type oldTokenDesc struct {
+	Token    uint32 `json:"tokens"`
+	Ingester string `json:"ingester"`
+}
+
 // UnmarshalJSON allows the new proto IngesterDescs to read the old JSON format.
 //
 // NB grpc_hostname in the old format is just hostname in the new.
@@ -65,6 +70,24 @@ func (d *IngesterDesc) MarshalJSON() ([]byte, error) {
 		State:        d.State,
 		GRPCHostname: d.Hostname,
 		ProtoRing:    d.ProtoRing,
+	})
+}
+
+func (d *TokenDesc) UnmarshalJSON(in []byte) error {
+	var tmp oldTokenDesc
+	if err := json.Unmarshal(in, &tmp); err != nil {
+		return err
+	}
+
+	d.Token = tmp.Token
+	d.Ingester = tmp.Ingester
+	return nil
+}
+
+func (d *TokenDesc) MarshalJSON() ([]byte, error) {
+	return json.Marshal(oldTokenDesc{
+		Token:    d.Token,
+		Ingester: d.Ingester,
 	})
 }
 
