@@ -1,9 +1,13 @@
-FROM golang:1.7.3
+#FROM golang:1.7.3
+FROM openthings/ubuntu-golang:ARM64
+
 RUN apt-get update && apt-get install -y python-requests python-yaml file jq unzip && \
 	rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
 RUN go clean -i net && \
 	go install -tags netgo std && \
 	go install -race -tags netgo std
+
 RUN go get -tags netgo \
 		github.com/fzipp/gocyclo \
 		github.com/golang/lint/golint \
@@ -14,6 +18,7 @@ RUN go get -tags netgo \
 		github.com/golang/protobuf/protoc-gen-go \
 		github.com/mvdan/sh/cmd/shfmt && \
 	rm -rf /go/pkg /go/src
+
 RUN mkdir protoc && \
 	cd protoc && \
 	curl -O -L https://github.com/google/protobuf/releases/download/v3.1.0/protoc-3.1.0-linux-x86_64.zip && \
@@ -22,5 +27,7 @@ RUN mkdir protoc && \
 	chmod o+x /usr/bin/protoc && \
 	cd .. && \
 	rm -rf protoc
+
 COPY build.sh /
+
 ENTRYPOINT ["/build.sh"]
